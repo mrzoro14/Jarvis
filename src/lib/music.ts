@@ -196,6 +196,18 @@ export function playBoot() {
 }
 
 /**
+ * End the power-up swell early. For the short returning-user power-up, which
+ * is over long before the full clip would dissolve on its own.
+ */
+export function cutBoot(ms = 1200) {
+  if (dissolve) {
+    clearTimeout(dissolve)
+    dissolve = null
+  }
+  if (tracks.has('boot-music')) set('boot-music', 0, ms)
+}
+
+/**
  * The opening music. Once, from the top, and then it is finished.
  *
  * The four-second fade this used to have made sense for a bed that ran all

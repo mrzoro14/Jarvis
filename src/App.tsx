@@ -496,6 +496,8 @@ export default function App() {
     const bootStart = performance.now()
     await warming
     const returning = isReturning()
+    // The full start-up track runs ~17s; let it go before the welcome-back.
+    if (returning) music.cutBoot(1500)
     const bootMs = returning ? 3000 : 9200 // boot sequence
     await new Promise((r) => setTimeout(r, Math.max(0, bootMs - (performance.now() - bootStart))))
     store.getState().setConnected(connectedLabels())
