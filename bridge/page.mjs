@@ -86,12 +86,30 @@ const KILL = [
   'iframe', 'object', 'embed', 'applet', 'link', 'meta',
 ]
 
-function stripDangerous(html) {
+/**
+ * keepStyles is for live mode, which promises the page "looks like itself":
+ * without its <style> and stylesheet <link>s it is a bare list of links. CSS
+ * cannot run script, and the frame's CSP admits only our nonce anyway.
+ */
+function stripDangerous(html, { keepStyles = false } = {}) {
   let out = html.replace(/<!--[\s\S]*?-->/g, '')
   for (const tag of KILL) {
+    if (keepStyles && (tag === 'style' || tag === 'link')) continue
     out = out.replace(new RegExp(`<${tag}\\b[\\s\\S]*?</${tag}\\s*>`, 'gi'), '')
     // Void and unclosed forms of the same tags.
     out = out.replace(new RegExp(`<${tag}\\b[^>]*/?>`, 'gi'), '')
+  }
+  if (keepStyles) {
+    // Stylesheets only; the rest of <link> still goes. A style preload is
+    // promoted to a stylesheet, which is all its (stripped) onload would have
+    // done — and its <noscript> fallback went with the other noscripts.
+    out = out.replace(/<link\b[^>]*>/gi, (tag) => {
+      if (/\srel\s*=\s*["']?stylesheet\b/i.test(tag)) return tag
+      if (/\srel\s*=\s*["']?preload\b/i.test(tag) && /\sas\s*=\s*["']?style\b/i.test(tag)) {
+        return tag.replace(/\srel\s*=\s*(["']?)preload\1/i, ' rel="stylesheet"')
+      }
+      return ''
+    })
   }
   // Inline event handlers, and the two URL schemes that are code.
   out = out.replace(/\son[a-z]+\s*=\s*(["'])[\s\S]*?\1/gi, '')
@@ -367,7 +385,7 @@ ${blocks.join('\n') || '<p class="rd-p">Nothing readable could be extracted from
  * <script> is gone from the markup before it is served.
  */
 function toLive(html, pageUrl) {
-  let out = stripDangerous(html)
+  let out = stripDangerous(html, { keepStyles: true })
   // Anything the page said about its own framing or transport belongs to a
   // context that no longer exists, and a stale <base> would send every relative
   // URL somewhere we did not choose.
@@ -421,7 +439,9 @@ export async function renderPage(url, mode, bridgeOrigin) {
     ? "default-src 'none'; img-src https: http: data: blob:; " +
       "style-src 'unsafe-inline' https: http: data:; font-src https: http: data:; " +
       `media-src https: http: data:; script-src 'nonce-${nonce}'; form-action 'none'; ` +
-      "frame-src 'none'; object-src 'none'; base-uri 'none'"
+      // The injected <base> is what points relative stylesheets and images back
+      // at the publisher; base-uri 'none' would make the browser ignore it.
+      `frame-src 'none'; object-src 'none'; base-uri ${new URL(page.url).origin}`
     : `default-src 'none'; img-src ${bridgeOrigin} data:; ` +
       `style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; form-action 'none'; ` +
       "frame-src 'none'; object-src 'none'; base-uri 'none'"
