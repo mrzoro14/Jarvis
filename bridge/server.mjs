@@ -22,6 +22,7 @@ import { uiServer } from './ui.mjs'
 import { chromeAvailable, chromeServer } from './chrome.mjs'
 import { visionServer } from './vision.mjs'
 import { githubServer } from './github.mjs'
+import { desktopServer } from './desktop.mjs'
 import { homedir, tmpdir } from 'node:os'
 import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
@@ -282,6 +283,9 @@ function decideTool(name) {
 
     // GitHub notifications: one fixed GET through the user's gh login, no shell.
     if (server === 'jarvis_github') return true
+
+    // Opening a folder window: directories only, no shell, nothing changed.
+    if (server === 'jarvis_desktop') return true
 
     const tool = mcpToolOf(name)
     if (EFFECTFUL_VERB.test(tool) && !VETO_EXEMPT.has(`${server}__${tool}`)) {
@@ -1257,6 +1261,8 @@ wss.on('connection', (socket) => {
         // Read-only GitHub notifications, so "check my notifications" works
         // without opening up shell access.
         jarvis_github: githubServer(),
+        // Folder windows in File Explorer (Windows only).
+        ...(process.platform === 'win32' ? { jarvis_desktop: desktopServer() } : {}),
       },
       // A plain system prompt, not the claude_code preset. The preset is
       // tuned for a coding agent — verbose, file-oriented, and a large chunk
