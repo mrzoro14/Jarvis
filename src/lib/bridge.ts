@@ -35,6 +35,7 @@ type Frame = {
   seconds?: number
   when?: string
   servers?: Array<string | { name?: string }>
+  resumed?: boolean
 }
 
 /** Every question gets an id so its answer can be told from anyone else's. */
@@ -46,6 +47,10 @@ let connecting: Promise<WebSocket> | null = null
 /** Server names reported by the bridge, for the HUD readout. */
 let servers: string[] = []
 export const bridgeServers = () => servers
+
+/** Whether the bridge picked up an earlier conversation on connect. */
+let resumed = false
+export const bridgeResumed = () => resumed
 
 /** The list arrives twice — once from config, once with live status — so the
  *  HUD subscribes rather than reading it a single time at boot. */
@@ -175,6 +180,8 @@ function dispatch(ws: WebSocket) {
       servers = (msg.servers ?? [])
         .map((s) => (typeof s === 'string' ? s : (s.name ?? '')))
         .filter(Boolean)
+      // Only the first announcement carries it; the later one leaves it alone.
+      if (typeof msg.resumed === 'boolean') resumed = msg.resumed
       onServers?.(servers)
       firstReady.resolve()
     } else if (msg.type === 'panel' && msg.panel) {

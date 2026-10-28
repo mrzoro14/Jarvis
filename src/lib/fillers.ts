@@ -67,6 +67,13 @@ export const working = makePicker(WORKING)
 export const acknowledge = makePicker(ACKNOWLEDGE)
 export const attention = makePicker(ATTENTION)
 
+/** Coming back up on a conversation that is already under way. */
+export const welcomeBack = makePicker([
+  'Welcome back, sir.',
+  'Good to have you back, sir.',
+  'Welcome back, sir. Where were we?',
+])
+
 /**
  * Naming the task is warmer than a generic acknowledgement and shows the
  * integration off on camera. Still participial, still under five words.
