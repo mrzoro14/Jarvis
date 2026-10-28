@@ -125,6 +125,11 @@ export function watchConnection(
   if (usingBridge) bridge.watchConnection(fn)
 }
 
+/** True when this launch continues an earlier conversation (bridge only). */
+export function isReturning(): boolean {
+  return usingBridge && bridge.bridgeResumed()
+}
+
 /** Labels for the HUD's SYSTEMS rail. */
 export function connectedLabels(): string[] {
   return usingBridge ? bridge.bridgeServers() : direct.connectedLabels()

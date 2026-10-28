@@ -14,7 +14,7 @@ import { listenForClap } from './lib/clap'
 import * as camera from './lib/camera'
 import * as kokoro from './lib/kokoro'
 import { TTS_ENGINE } from './config'
-import { forTool, attention } from './lib/fillers'
+import { forTool, attention, welcomeBack } from './lib/fillers'
 import {
   ask,
   warm,
@@ -26,6 +26,7 @@ import {
   watchUi,
   watchConnection,
   connectedLabels,
+  isReturning,
   usingBridge,
   type Msg,
 } from './lib/brain'
@@ -491,8 +492,12 @@ export default function App() {
     // status bar, rings, suit schematic, reactor power-up — before the live
     // interface takes over. Kept a touch under the boot cue so the music is
     // still rising as the reactor lands.
-    await new Promise((r) => setTimeout(r, 9200)) // boot sequence
+    // A returning user gets a short power-up, not the full introduction.
+    const bootStart = performance.now()
     await warming
+    const returning = isReturning()
+    const bootMs = returning ? 3000 : 9200 // boot sequence
+    await new Promise((r) => setTimeout(r, Math.max(0, bootMs - (performance.now() - bootStart))))
     store.getState().setConnected(connectedLabels())
     store.getState().setVoice(currentVoiceName())
 
@@ -525,6 +530,13 @@ export default function App() {
     })
 
     store.getState().setPhase('dormant')
+
+    if (returning) {
+      const hello = createSpeaker()
+      speaker.current = hello
+      hello.say(welcomeBack())
+      void hello.end()
+    }
   }
 
   // -- clap to start --------------------------------------------------------
